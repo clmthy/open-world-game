@@ -1,0 +1,92 @@
+<!doctype html>
+<!-- index.html - entry point for Heatline: Marisol Bay, an original open-world crime game. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heatline: Marisol Bay</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0e1a; font-family: "Segoe UI", Arial, sans-serif; }
+  #app { position: fixed; inset: 0; }
+  #c { display: block; width: 100%; height: 100%; touch-action: none; }
+  .hud { position: absolute; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8); user-select: none; pointer-events: none; }
+  #minimap { left: 18px; bottom: 18px; width: 210px; height: 210px; border: 2px solid rgba(255,255,255,.35); border-radius: 50%; background: rgba(8,12,24,.72); overflow: hidden; }
+  #minimap canvas { width: 100%; height: 100%; display: block; }
+  #wanted { right: 20px; top: 16px; font-size: 30px; letter-spacing: 4px; color: #ff3b30; font-weight: 800; }
+  #wanted .off { color: rgba(255,255,255,.25); }
+  #objective { left: 50%; top: 14px; transform: translateX(-50%); text-align: center; font-size: 17px; font-weight: 700; background: rgba(8,12,24,.6); padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,.18); max-width: 640px; }
+  #objective small { display: block; font-size: 12px; color: #ffd75e; font-weight: 600; }
+  #speedo { right: 20px; bottom: 20px; text-align: right; font-size: 15px; }
+  #speedo b { font-size: 34px; }
+  #vitals { left: 244px; bottom: 22px; font-size: 15px; line-height: 1.5; }
+  #vitals b { color: #7dff9a; }
+  #ammo { right: 20px; bottom: 96px; text-align: right; font-size: 15px; }
+  #ammo b { font-size: 22px; }
+  #subtitle { left: 50%; bottom: 108px; transform: translateX(-50%); font-size: 19px; font-weight: 600; text-align: center; max-width: 760px; background: rgba(0,0,0,.55); padding: 6px 14px; border-radius: 6px; }
+  #crosshair { left: 50%; top: 50%; transform: translate(-50%,-50%); font-size: 22px; color: rgba(255,255,255,.9); display: none; }
+  #toast { left: 50%; top: 84px; transform: translateX(-50%); font-size: 22px; font-weight: 800; color: #ffd75e; text-align: center; }
+  #vignette { inset: 0; pointer-events: none; box-shadow: inset 0 0 120px 40px rgba(255,0,0,.55); opacity: 0; transition: opacity .4s; }
+  #damage { inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(255,0,0,.5) 100%); opacity: 0; }
+  #interact { left: 50%; top: 58%; transform: translateX(-50%); font-size: 16px; font-weight: 700; background: rgba(8,12,24,.75); padding: 6px 12px; border-radius: 5px; border: 1px solid rgba(255,255,255,.3); }
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; background: linear-gradient(160deg, rgba(10,8,32,.88), rgba(64,10,40,.82)); z-index: 10; text-align: center; }
+  .screen h1 { font-size: 64px; margin: 0; letter-spacing: 3px; color: #ff5e7a; text-shadow: 0 0 24px rgba(255,94,122,.8), 0 2px 0 #000; }
+  .screen h2 { font-size: 22px; margin: 6px 0 18px; color: #8fe3ff; letter-spacing: 6px; font-weight: 600; }
+  .screen p { max-width: 640px; line-height: 1.6; color: #e8ecff; }
+  .btn { pointer-events: auto; cursor: pointer; background: #ff5e7a; color: #fff; border: none; font-size: 19px; font-weight: 700; padding: 12px 34px; margin: 6px; border-radius: 8px; box-shadow: 0 4px 0 #a12a44; }
+  .btn:hover { filter: brightness(1.12); }
+  .btn.ghost { background: rgba(255,255,255,.14); box-shadow: 0 4px 0 rgba(0,0,0,.4); }
+  .keys { font-size: 14px; color: #cfd6ff; line-height: 1.9; margin-top: 10px; }
+  #pauseMap { width: 560px; height: 420px; border: 2px solid rgba(255,255,255,.4); border-radius: 8px; background: rgba(8,12,24,.85); }
+  #slots { display: flex; gap: 10px; margin-top: 12px; }
+  .slot { pointer-events: auto; cursor: pointer; border: 1px solid rgba(255,255,255,.35); border-radius: 6px; padding: 10px 16px; font-size: 14px; background: rgba(255,255,255,.08); }
+  .slot:hover { background: rgba(255,255,255,.2); }
+  .hidden { display: none !important; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+</head>
+<body>
+<div id="app">
+  <canvas id="c"></canvas>
+  <div id="vignette" class="hud"></div>
+  <div id="damage" class="hud"></div>
+  <div id="minimap" class="hud"><canvas id="mapCanvas" width="210" height="210"></canvas></div>
+  <div id="wanted" class="hud"></div>
+  <div id="objective" class="hud hidden"></div>
+  <div id="speedo" class="hud hidden"></div>
+  <div id="vitals" class="hud"></div>
+  <div id="ammo" class="hud hidden"></div>
+  <div id="subtitle" class="hud hidden"></div>
+  <div id="crosshair" class="hud">+</div>
+  <div id="toast" class="hud"></div>
+  <div id="interact" class="hud hidden"></div>
+
+  <div id="startScreen" class="screen">
+    <h1>HEATLINE</h1>
+    <h2>MARISOL BAY</h2>
+    <p>Dez Calloway is out after three years inside. The man who set him up owns the city now.
+       Steal cars, run cargo, gather the evidence — and take the drive to Pelican Tower.</p>
+    <div>
+      <button class="btn" id="btnNew">NEW GAME</button>
+      <button class="btn ghost" id="btnContinue">CONTINUE</button>
+    </div>
+    <div>
+      <button class="btn ghost" id="btnQuality">QUALITY: HIGH</button>
+    </div>
+    <div class="keys">WASD move / drive &nbsp;·&nbsp; Mouse look &nbsp;·&nbsp; E enter / exit car &nbsp;·&nbsp; F shoot / punch &nbsp;·&nbsp; 1-6 weapons &nbsp;·&nbsp; Space handbrake &nbsp;·&nbsp; C camera &nbsp;·&nbsp; Esc pause &nbsp;·&nbsp; R respray at repair shop</div>
+  </div>
+
+  <div id="pauseScreen" class="screen hidden">
+    <h2 style="font-size:30px;letter-spacing:4px;margin:0 0 10px">PAUSED — MARISOL BAY</h2>
+    <canvas id="pauseMap" width="560" height="420"></canvas>
+    <div id="slots"></div>
+    <div>
+      <button class="btn" id="btnResume">RESUME</button>
+      <button class="btn ghost" id="btnQuit">SAVE &amp; QUIT TO TITLE</button>
+    </div>
+  </div>
+</div>
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
